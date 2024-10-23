@@ -1,44 +1,12 @@
-"use client";
+"use client"
 
-import React, { useEffect, useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
-} from "recharts";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import React, { useEffect, useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts'
+import { ChartContainer } from "@/components/ui/chart"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 const colors = [
   "hsl(var(--chart-1))",
@@ -49,7 +17,7 @@ const colors = [
   "hsl(var(--chart-6))",
   "hsl(var(--chart-7))",
   "hsl(var(--chart-8))",
-];
+]
 
 const chartConfig = {
   male: {
@@ -71,93 +39,76 @@ const chartConfig = {
   sector3: {
     label: "Sektor 3",
     color: colors[4],
-  },
-};
+  }
+}
 
 export default function EmploymentDashboard() {
-  const [data, setData] = useState(null);
-  const [selectedRegion, setSelectedRegion] = useState("0");
-  const [selectedSector, setSelectedSector] = useState("TOT");
+  const [data, setData] = useState(null)
+  const [selectedRegion, setSelectedRegion] = useState("0")
+  const [selectedSector, setSelectedSector] = useState("TOT")
 
   useEffect(() => {
-    fetch("/api/employment-data")
+    fetch('/api/employment-data')
       .then((response) => response.json())
-      .then((jsonData) => setData(jsonData));
-  }, []);
+      .then((jsonData) => setData(jsonData))
+  }, [])
 
-  if (!data) return <div>Loading...</div>;
+  if (!data) return <div>Loading...</div>
 
-  const regions = data.dataset.dimension.Grossregion.category;
-  const sectors = data.dataset.dimension.Wirtschaftssektor.category;
-  const quarters = data.dataset.dimension.Quartal.category;
+  const regions = data.dataset.dimension.Grossregion.category
+  const sectors = data.dataset.dimension.Wirtschaftssektor.category
+  const quarters = data.dataset.dimension.Quartal.category
 
-  const getGenderDistribution = (regionId, sectorId) => {
-    const baseIndex = regions.index[regionId] * sectors.index[sectorId] * 3;
-    const maleIndex =
-      baseIndex + data.dataset.dimension.Geschlecht.category.index["1"];
-    const femaleIndex =
-      baseIndex + data.dataset.dimension.Geschlecht.category.index["2"];
+  const getGenderDistribution = (regionId) => {
+    const maleIndex = regionId * 2 + data.dataset.dimension.Geschlecht.category.index['1'];  // '1' for male
+    const femaleIndex = regionId * 2 + data.dataset.dimension.Geschlecht.category.index['2']; // '2' for female
 
     return {
       male: data.dataset.value[maleIndex] || 0,
-      female: data.dataset.value[femaleIndex] || 0,
+      female: data.dataset.value[femaleIndex] || 0
     };
-  };
+  }
 
   const getGenderTrend = () => {
     const trend = [];
     const quarterLabels = Object.keys(quarters.label);
-
+  
     quarterLabels.forEach((quarter, idx) => {
-      const baseIndex =
-        idx * regions.index[selectedRegion] * sectors.index[selectedSector] * 3;
-      const maleValue =
-        data.dataset.value[
-          baseIndex + data.dataset.dimension.Geschlecht.category.index["1"]
-        ] || 0;
-      const femaleValue =
-        data.dataset.value[
-          baseIndex + data.dataset.dimension.Geschlecht.category.index["2"]
-        ] || 0;
-      const total = maleValue + femaleValue;
-
+      const maleValue = data.dataset.value[idx * 2 + data.dataset.dimension.Geschlecht.category.index['1']] || 0;
+      const femaleValue = data.dataset.value[idx * 2 + data.dataset.dimension.Geschlecht.category.index['2']] || 0;
+  
       trend.push({
         quarter,
         male: maleValue,
         female: femaleValue,
-        malePercentage: ((maleValue / total) * 100).toFixed(1),
-        femalePercentage: ((femaleValue / total) * 100).toFixed(1),
+        malePercentage: (maleValue / (maleValue + femaleValue) * 100).toFixed(1),
+        femalePercentage: (femaleValue / (maleValue + femaleValue) * 100).toFixed(1)
       });
     });
-
+  
     return trend;
-  };
+  }
 
   const getSectorComparison = () => {
-    return Object.entries(sectors.label)
-      .filter(([sectorId]) => sectorId !== "TOT")
-      .map(([sectorId, sectorLabel]) => {
-        const { male, female } = getGenderDistribution(
-          selectedRegion,
-          sectorId
-        );
-        const total = male + female;
-
-        return {
+    const comparison = [];
+    
+    Object.entries(sectors.label).forEach(([sectorId, sectorLabel]) => {
+      if (sectorId !== 'TOT') {
+        const maleData = getGenderDistribution(regions.index[selectedRegion], sectorId).male;
+        const femaleData = getGenderDistribution(regions.index[selectedRegion], sectorId).female;
+        const total = maleData + femaleData;
+  
+        comparison.push({
           sector: sectorLabel,
-          malePercentage: ((male / total) * 100).toFixed(1),
-          femalePercentage: ((female / total) * 100).toFixed(1),
-          total,
-        };
-      });
-  };
-
-  const genderDistributionData = getGenderDistribution(
-    selectedRegion,
-    selectedSector
-  );
-  const genderTrendData = getGenderTrend();
-  const sectorComparisonData = getSectorComparison();
+          malePercentage: (maleData / total * 100).toFixed(1),
+          femalePercentage: (femaleData / total * 100).toFixed(1),
+          total
+        });
+      }
+    });
+    
+    return comparison;
+  }      
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 space-y-8">
@@ -200,10 +151,7 @@ export default function EmploymentDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Geschlechterverteilung</CardTitle>
-              <CardDescription>
-                Aktuelle Verteilung nach Geschlecht für die gewählte Region und
-                Sektor
-              </CardDescription>
+              <CardDescription>Aktuelle Verteilung nach Geschlecht für die gewählte Region und Sektor</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[400px]">
@@ -211,25 +159,20 @@ export default function EmploymentDashboard() {
                   <PieChart>
                     <Pie
                       data={[
-                        { name: "Männer", value: genderDistributionData.male },
-                        {
-                          name: "Frauen",
-                          value: genderDistributionData.female,
-                        },
+                        { name: 'Männer', value: getGenderDistribution(selectedRegion, selectedSector).male },
+                        { name: 'Frauen', value: getGenderDistribution(selectedRegion, selectedSector).female }
                       ]}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) =>
-                        `${name}: ${(percent * 100).toFixed(1)}%`
-                      }
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
                     >
                       <Cell fill={colors[0]} />
                       <Cell fill={colors[1]} />
                     </Pie>
-                    <ChartTooltip />
+                    <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -242,32 +185,18 @@ export default function EmploymentDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow>
-                    <TableCell>Männer</TableCell>
-                    <TableCell>{genderDistributionData.male}</TableCell>
-                    <TableCell>
-                      {(
-                        (genderDistributionData.male /
-                          (genderDistributionData.male +
-                            genderDistributionData.female)) *
-                        100
-                      ).toFixed(1)}
-                      %
-                    </TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell>Frauen</TableCell>
-                    <TableCell>{genderDistributionData.female}</TableCell>
-                    <TableCell>
-                      {(
-                        (genderDistributionData.female /
-                          (genderDistributionData.male +
-                            genderDistributionData.female)) *
-                        100
-                      ).toFixed(1)}
-                      %
-                    </TableCell>
-                  </TableRow>
+                  {['Männer', 'Frauen'].map((gender, index) => {
+                    const value = getGenderDistribution(selectedRegion, selectedSector)[gender.toLowerCase() === 'männer' ? 'male' : 'female']
+                    const total = getGenderDistribution(selectedRegion, selectedSector).male + getGenderDistribution(selectedRegion, selectedSector).female
+                    const percent = ((value / total) * 100).toFixed(1)
+                    return (
+                      <TableRow key={gender}>
+                        <TableCell>{gender}</TableCell>
+                        <TableCell>{value.toLocaleString()}</TableCell>
+                        <TableCell>{percent}%</TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -278,31 +207,19 @@ export default function EmploymentDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Entwicklung über Zeit</CardTitle>
-              <CardDescription>
-                Trend der Geschlechterverteilung über die Quartale
-              </CardDescription>
+              <CardDescription>Trend der Geschlechterverteilung über die Quartale</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={genderTrendData}>
+                  <LineChart data={getGenderTrend()}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="quarter" />
                     <YAxis />
-                    <ChartTooltip />
+                    <Tooltip />
                     <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="malePercentage"
-                      name="Männer %"
-                      stroke={colors[0]}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="femalePercentage"
-                      name="Frauen %"
-                      stroke={colors[1]}
-                    />
+                    <Line type="monotone" dataKey="malePercentage" name="Männer %" stroke={colors[0]} />
+                    <Line type="monotone" dataKey="femalePercentage" name="Frauen %" stroke={colors[1]} />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -315,8 +232,8 @@ export default function EmploymentDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {genderTrendData.map((item, index) => (
-                    <TableRow key={index}>
+                  {getGenderTrend().map((item) => (
+                    <TableRow key={item.quarter}>
                       <TableCell>{item.quarter}</TableCell>
                       <TableCell>{item.malePercentage}%</TableCell>
                       <TableCell>{item.femalePercentage}%</TableCell>
@@ -332,31 +249,19 @@ export default function EmploymentDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Sektorvergleich</CardTitle>
-              <CardDescription>
-                Geschlechterverteilung nach Wirtschaftssektoren
-              </CardDescription>
+              <CardDescription>Geschlechterverteilung nach Wirtschaftssektoren</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sectorComparisonData} layout="vertical">
+                  <BarChart data={getSectorComparison()} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis type="number" />
                     <YAxis dataKey="sector" type="category" width={120} />
-                    <ChartTooltip />
+                    <Tooltip />
                     <Legend />
-                    <Bar
-                      dataKey="malePercentage"
-                      name="Männer %"
-                      fill={colors[0]}
-                      stackId="a"
-                    />
-                    <Bar
-                      dataKey="femalePercentage"
-                      name="Frauen %"
-                      fill={colors[1]}
-                      stackId="a"
-                    />
+                    <Bar dataKey="malePercentage" name="Männer %" fill={colors[0]} stackId="a" />
+                    <Bar dataKey="femalePercentage" name="Frauen %" fill={colors[1]} stackId="a" />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -370,12 +275,12 @@ export default function EmploymentDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sectorComparisonData.map((item, index) => (
-                    <TableRow key={index}>
+                  {getSectorComparison().map((item) => (
+                    <TableRow key={item.sector}>
                       <TableCell>{item.sector}</TableCell>
                       <TableCell>{item.malePercentage}%</TableCell>
                       <TableCell>{item.femalePercentage}%</TableCell>
-                      <TableCell>{item.total}</TableCell>
+                      <TableCell>{item.total.toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -385,5 +290,5 @@ export default function EmploymentDashboard() {
         </TabsContent>
       </Tabs>
     </div>
-  );
+  )
 }
