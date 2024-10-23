@@ -7,5 +7,6 @@ export async function GET() {
   const fileContents = fs.readFileSync(filePath, 'utf8')
   const data = JSON.parse(fileContents)
 
+  console.log(data)
   return NextResponse.json(data)
 }
