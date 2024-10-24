@@ -64,16 +64,17 @@ const getGenderDistribution = (processedData) => (regionId, sectorId, quarterId)
 }
 
 const getGenderTrend = (processedData) => (regionId, sectorId) =>
-    processedData.quarters.map(quarter => {
-      const distribution = getGenderDistribution(processedData)(regionId, sectorId, quarter.id)
-      return {
-        quarter: quarter.label,
-        male: distribution.male,
-        female: distribution.female,
-        malePercentage: distribution.malePercentage,
-        femalePercentage: distribution.femalePercentage
-      }
-    })
+    processedData.quarters.reduce((trend, quarter) => {
+        const distribution = getGenderDistribution(processedData)(regionId, sectorId, quarter.id)
+        trend.push({
+            quarter: quarter.label,
+            male: distribution.male,
+            female: distribution.female,
+            malePercentage: distribution.malePercentage,
+            femalePercentage: distribution.femalePercentage
+        })
+        return trend
+    }, [])
 
 const getSectorComparison = (processedData) => (regionId, quarterId) =>
     processedData.sectors
