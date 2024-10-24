@@ -1,5 +1,7 @@
 import rawData from '../public/employment-data.json'
 
+//erstellt und sortiert die verschiedenen Kategorien in einen Array aus Objekten
+// -> vereinfacht den späteren Zugriff auf label und index
 const processCategory = (category) =>
     Object.entries(category.index)
         .map(([id, index]) => ({
@@ -9,6 +11,11 @@ const processCategory = (category) =>
         }))
         .sort((a, b) => a.index - b.index)
 
+
+//restrukturiert die rohen Daten in ein besser zugängliches Objekt
+//erstellt strukturierte Objekte für die verschiedenen Kategorien (mit processCategory-Funktion)
+//extrahiert die Werte in ein eigenes Sub-Objekt
+//legt die Dimensionsgrösse jeder Kategorie fest
 const processData = (data) => {
   const { dataset } = data
   const { Grossregion, Wirtschaftssektor, Geschlecht, Quartal } = dataset.dimension
@@ -27,7 +34,7 @@ const processData = (data) => {
     }
   }
 }
-
+//Funktion zur Berechnung des ein-dimensionalen Indexes der den Datenpunkt des (theoretisch) vier-dimensionalen Arrays repräsentiert
 const getIndex = (processedData, regionId, sectorId, genderId, quarterId) => {
   const { Grossregion, Wirtschaftssektor, Geschlecht, Quartal } = rawData.dataset.dimension
   const { sectorsCount, gendersCount, quartersCount } = processedData.dimensions
@@ -45,6 +52,9 @@ const getIndex = (processedData, regionId, sectorId, genderId, quarterId) => {
   )
 }
 
+//Curried-Function -> processedData muss nicht bei jedem Aufruf mitgegeben werden
+//gibt die Geschlechterverteilung einem bestimmten Quartal eines bestimmten Sektors in einer bestimmten Region zurück
+//Rückgabe der Werte und Prozentsätze für Männer und Frauen und das Total
 const getGenderDistribution = (processedData) => (regionId, sectorId, quarterId) => {
   const maleIndex = getIndex(processedData, regionId, sectorId, "1", quarterId)
   const femaleIndex = getIndex(processedData, regionId, sectorId, "2", quarterId)
@@ -63,6 +73,9 @@ const getGenderDistribution = (processedData) => (regionId, sectorId, quarterId)
   }
 }
 
+//Curried-Funktion -> processedData muss nicht bei jedem Aufruf mitgegeben werden
+//gibt den Trend der Geschlechterverteilung für einen bestimmten Sektor in einer Region zurück
+//ruft für jedes Quartal getGenderDistribution auf
 const getGenderTrend = (processedData) => (regionId, sectorId) =>
     processedData.quarters.reduce((trend, quarter) => {
         const distribution = getGenderDistribution(processedData)(regionId, sectorId, quarter.id)
@@ -76,6 +89,8 @@ const getGenderTrend = (processedData) => (regionId, sectorId) =>
         return trend
     }, [])
 
+//Curried-Funktion -> processedData muss nicht bei jedem Aufruf mitgegeben werden
+//gibt die Geschlechterverteilung der Sektoren von einem bestimmten Quartal in einer Region zurück
 const getSectorComparison = (processedData) => (regionId, quarterId) =>
     processedData.sectors
         .filter(sector => sector.id !== 'TOT')
@@ -89,9 +104,11 @@ const getSectorComparison = (processedData) => (regionId, quarterId) =>
           }
         })
 
+//gibt die ID des neusten Quartals zurück
 const getLatestQuarter = (processedData) =>
     processedData.quarters[processedData.quarters.length - 1].id
 
+//Testfunktion -> rückgabe eines bestimmten Datensatzes
 const testDataPoint = (processedData) => {
   const distribution = getGenderDistribution(processedData)("0", "3", "2024Q2")
   console.log("Test Data Point (Schweiz, Sektor 3, 2024Q2):")
@@ -100,8 +117,10 @@ const testDataPoint = (processedData) => {
   console.log(`Total: ${distribution.total}`)
 }
 
+//Funktionsaufruf (Konstruktor) der processData-Funktion
 const processedData = processData(rawData)
 
+//Objekterstellung mit allen Funktionen
 const dataProcessor = {
   getRegions: () => processedData.regions,
   getSectors: () => processedData.sectors,
