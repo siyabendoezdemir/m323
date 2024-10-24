@@ -59,11 +59,11 @@ export default function Component() {
 
   useEffect(() => {
     updateGenderTrend()
-  }, [selectedRegion, selectedSector])
+  }, [selectedRegion, selectedSector, updateGenderTrend])
 
   useEffect(() => {
     updateSectorComparison()
-  }, [selectedRegion, selectedQuarter])
+  }, [selectedRegion, selectedQuarter, updateSectorComparison])
 
   const updateGenderTrend = () => {
     const trend = dataProcessor.getGenderTrend(selectedRegion, selectedSector)
