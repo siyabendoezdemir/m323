@@ -1,13 +1,13 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { ChartContainer } from "@/components/ui/chart"
-import dataProcessor from './dataProcessor.js'
+import dataProcessor from './dataProcessor'
 
 const colors = [
   "hsl(var(--chart-1))",
@@ -47,19 +47,45 @@ export default function Component() {
   const [selectedRegion, setSelectedRegion] = useState("0")
   const [selectedSector, setSelectedSector] = useState("TOT")
   const [selectedQuarter, setSelectedQuarter] = useState(dataProcessor.getLatestQuarter())
+  const [activeTab, setActiveTab] = useState("distribution")
+  const [genderTrend, setGenderTrend] = useState([])
+  const [sectorComparison, setSectorComparison] = useState([])
 
   const regions = dataProcessor.getRegions()
   const sectors = dataProcessor.getSectors()
   const quarters = dataProcessor.getQuarters()
 
   const genderDistribution = dataProcessor.getGenderDistribution(selectedRegion, selectedSector, selectedQuarter)
-  const genderTrend = dataProcessor.getGenderTrend()
-  const sectorComparison = dataProcessor.getSectorComparison(selectedRegion)
+
+  useEffect(() => {
+    updateGenderTrend()
+  }, [selectedRegion, selectedSector])
+
+  useEffect(() => {
+    updateSectorComparison()
+  }, [selectedRegion, selectedQuarter])
+
+  const updateGenderTrend = () => {
+    const trend = dataProcessor.getGenderTrend(selectedRegion, selectedSector)
+    setGenderTrend(trend)
+  }
+
+  const updateSectorComparison = () => {
+    const comparison = dataProcessor.getSectorComparison(selectedRegion, selectedQuarter)
+    setSectorComparison(comparison)
+  }
 
   return (
       <div className="w-full max-w-7xl mx-auto p-4 space-y-8">
         <div className="flex gap-4 mb-6">
-          <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+          <Select value={selectedRegion} onValueChange={(value) => {
+            setSelectedRegion(value)
+            if (activeTab === "trend") {
+              updateGenderTrend()
+            } else if (activeTab === "comparison") {
+              updateSectorComparison()
+            }
+          }}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Region wählen" />
             </SelectTrigger>
@@ -72,34 +98,48 @@ export default function Component() {
             </SelectContent>
           </Select>
 
-          <Select value={selectedSector} onValueChange={setSelectedSector}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Sektor wählen" />
-            </SelectTrigger>
-            <SelectContent>
-              {sectors.map(sector => (
-                  <SelectItem key={sector.id} value={sector.id}>
-                    {sector.label}
-                  </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {activeTab !== "comparison" && (
+              <Select value={selectedSector} onValueChange={(value) => {
+                setSelectedSector(value)
+                if (activeTab === "trend") {
+                  updateGenderTrend()
+                }
+              }}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Sektor wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sectors.map(sector => (
+                      <SelectItem key={sector.id} value={sector.id}>
+                        {sector.label}
+                      </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+          )}
 
-          <Select value={selectedQuarter} onValueChange={setSelectedQuarter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Quartal wählen" />
-            </SelectTrigger>
-            <SelectContent>
-              {quarters.map(quarter => (
-                  <SelectItem key={quarter.id} value={quarter.id}>
-                    {quarter.label}
-                  </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {activeTab !== "trend" && (
+              <Select value={selectedQuarter} onValueChange={(value) => {
+                setSelectedQuarter(value)
+                if (activeTab === "comparison") {
+                  updateSectorComparison()
+                }
+              }}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Quartal wählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {quarters.map(quarter => (
+                      <SelectItem key={quarter.id} value={quarter.id}>
+                        {quarter.label}
+                      </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+          )}
         </div>
 
-        <Tabs defaultValue="distribution">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="distribution">Geschlechterverteilung</TabsTrigger>
             <TabsTrigger value="trend">Zeitliche Entwicklung</TabsTrigger>
@@ -148,8 +188,7 @@ export default function Component() {
                         <TableBody>
                           {['Männer', 'Frauen'].map((gender) => {
                             const value = genderDistribution[gender.toLowerCase() === 'männer' ? 'male' : 'female']
-                            const total = genderDistribution.male + genderDistribution.female
-                            const percent = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0'
+                            const percent = genderDistribution[gender.toLowerCase() === 'männer' ? 'malePercentage' : 'femalePercentage']
                             return (
                                 <TableRow key={gender}>
                                   <TableCell>{gender}</TableCell>
@@ -238,7 +277,6 @@ export default function Component() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Sektor</TableHead>
-
                             <TableHead>Männer %</TableHead>
                             <TableHead>Frauen %</TableHead>
                             <TableHead>Total</TableHead>
