@@ -1,11 +1,15 @@
 import rawData from '../public/employment-data.json'
 
+//Klassendeklaration und Konstruktor-Methode
 class DataProcessor {
     constructor() {
         this.rawData = rawData
         this.processedData = this.processData()
     }
 
+    //Methode zur Aufbereitung der Daten
+    //gibt ein Objekt mit Attributen zu Regionen, Wirtschaftssektoren, Geschlecht und Quartalen zurück, sowie dem eigentlichen Datensatz
+    //Daten können so einfacher abgerufen werden
     processData() {
         const { dataset } = this.rawData
         const { Grossregion, Wirtschaftssektor, Geschlecht, Quartal } = dataset.dimension
@@ -25,6 +29,8 @@ class DataProcessor {
         }
     }
 
+    //Methode zur Erstellung und Sortierung der verschiedenen Kategorien
+    //erstellt for jede Kategorie ein Objekt mit einer ID, dem Label und einem Index
     processCategory(category) {
         const result = []
         for (let id in category.index) {
@@ -40,6 +46,8 @@ class DataProcessor {
         return result
     }
 
+    //Methode zur Berechnung des Indexes der angeforderten Daten
+    //Die Daten stellen theoretisch einen 4-dimensionalen Array dar, werden aber in einem ein-dimensionalen Array gespeichert.
     getIndex(regionId, sectorId, genderId, quarterId) {
         const { Grossregion, Wirtschaftssektor, Geschlecht, Quartal } = this.rawData.dataset.dimension
         const { sectorsCount, gendersCount, quartersCount } = this.processedData.dimensions
@@ -57,18 +65,23 @@ class DataProcessor {
         )
     }
 
+    //gibt alle Regionen zurück
     getRegions() {
         return this.processedData.regions
     }
 
+    //gibt die Wirtschaftssektoren zurück
     getSectors() {
         return this.processedData.sectors
     }
 
+    //gibt die Quartale zurück
     getQuarters() {
         return this.processedData.quarters
     }
 
+    //Methode zur Ausgabe der Geschlechterverteilung und Berechnung der Prozentwerte
+    //anhand der Eingaben werden die Indexe der gewünschten Daten berechnet und in einem Objekt zurückgegeben
     getGenderDistribution(regionId, sectorId, quarterId) {
         const maleIndex = this.getIndex(regionId, sectorId, "1", quarterId)
         const femaleIndex = this.getIndex(regionId, sectorId, "2", quarterId)
@@ -95,6 +108,9 @@ class DataProcessor {
         }
     }
 
+    //Methode zur Ausgabe des Geschlechtertrends
+    //ruft für jedes Quartal die getGenderDistribution-Methode auf und speichert die Objekte in einem Array
+    //gibt einen Array aus Objekten zurück
     getGenderTrend(regionId, sectorId) {
         const trend = []
         for (let i = 0; i < this.processedData.quarters.length; i++) {
@@ -111,6 +127,9 @@ class DataProcessor {
         return trend
     }
 
+    //Methode zur Ausgabe des Sektorenvergleiches
+    //ruft für alle Sektoren die getGenderDistribution-Methode auf und speichert die zurückgegebenen Objekte in einem Array
+    //gibt den Array mit Objekten zurück
     getSectorComparison(regionId, quarterId) {
         const comparison = []
         for (let i = 0; i < this.processedData.sectors.length; i++) {
@@ -128,10 +147,13 @@ class DataProcessor {
         return comparison
     }
 
+    //Methode zur Rückgabe des neusten Quartals
     getLatestQuarter() {
         return this.processedData.quarters[this.processedData.quarters.length - 1].id
     }
 
+    //Testmethode
+    //gibt festen Datensatz zurück
     testDataPoint() {
         const distribution = this.getGenderDistribution("0", "3", "2024Q2")
         console.log("Test Data Point (Schweiz, Sektor 3, 2024Q2):")
